@@ -1,6 +1,6 @@
-variable "client-id"
-variable "tenant-id"
-variable "subscription-id"
+variable "client-id" {}
+variable "tenant-id" {}
+variable "subscription-id" {}
 
 
 variable "tfstate_resource_group" {}
