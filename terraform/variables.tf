@@ -10,4 +10,7 @@ variable "tfstate_container" {}
 variable "env" {}
 variable "resource_group_name" {}
 variable "acr_name" {}
+variable "acr_repo" {}
+variable "aci_name" {}
 variable "container_name" {}
+variable "location" {}
