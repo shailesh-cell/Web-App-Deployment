@@ -3,9 +3,9 @@ name: Deploy Flask App to Azure
 on:
   push:
     branches:
-      - main
+      - main  # Change this if needed (e.g., add staging, dev)
 
-permissions:   # 🔥 ADD THIS SECTION
+permissions:   # 🔥 Required for OIDC-based authentication
   id-token: write
   contents: read
 
@@ -23,7 +23,7 @@ jobs:
           client-id: ${{ secrets.ARM_CLIENT_ID }}
           tenant-id: ${{ secrets.ARM_TENANT_ID }}
           subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-	  enable-AzPSSession: true
+          enable-AzPSSession: true  # ✅ Fixed indentation
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -36,19 +36,47 @@ jobs:
             -backend-config="resource_group_name=${{ secrets.TFSTATE_RESOURCE_GROUP }}" \
             -backend-config="storage_account_name=${{ secrets.TFSTATE_STORAGE_ACCOUNT }}" \
             -backend-config="container_name=${{ secrets.TFSTATE_CONTAINER }}" \
-            -backend-config="key=terraform.tfstate"
+            -backend-config="key=${{ github.ref_name }}-terraform.tfstate"
 
       - name: Validate Terraform
         run: terraform validate
 
+      - name: Plan Terraform
+        run: terraform plan -out=tfplan
+
       - name: Apply Terraform
+        env:  # 🔥 Using environment variables instead of CLI args
+          TF_VAR_subscription_id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          TF_VAR_client_id: ${{ secrets.ARM_CLIENT_ID }}
+          TF_VAR_client_secret: ${{ secrets.ARM_CLIENT_SECRET }}
+          TF_VAR_tenant_id: ${{ secrets.ARM_TENANT_ID }}
+          TF_VAR_tfstate_resource_group: ${{ secrets.TFSTATE_RESOURCE_GROUP }}
+          TF_VAR_tfstate_storage_account: ${{ secrets.TFSTATE_STORAGE_ACCOUNT }}
+          TF_VAR_tfstate_container: ${{ secrets.TFSTATE_CONTAINER }}
+        run: terraform apply -auto-approve tfplan
+
+      - name: Cleanup (Optional)
+        if: always()
+        run: echo "Deployment finished!"  # Add cleanup tasks if needed
+
+  rollback:
+    needs: deploy  # Rollback only if deploy fails
+    if: failure()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          enable-AzPSSession: true
+
+      - name: Rollback Deployment
         run: |
-          terraform apply -auto-approve \
-            -var="subscription_id=${{ secrets.ARM_SUBSCRIPTION_ID }}" \
-            -var="client_id=${{ secrets.ARM_CLIENT_ID }}" \
-            -var="client_secret=${{ secrets.ARM_CLIENT_SECRET }}" \
-            -var="tenant_id=${{ secrets.ARM_TENANT_ID }}" \
-            -var="tfstate_resource_group=${{ secrets.TFSTATE_RESOURCE_GROUP }}" \
-            -var="tfstate_storage_account=${{ secrets.TFSTATE_STORAGE_ACCOUNT }}" \
-            -var="tfstate_container=${{ secrets.TFSTATE_CONTAINER }}" \
-            -var-file="env/dev.tfvars"
+          echo "⚠️ Rollback triggered! Destroying last deployment..."
+          terraform destroy -auto-approve
