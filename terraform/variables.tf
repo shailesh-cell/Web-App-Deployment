@@ -8,6 +8,11 @@ variable "tenant-id" {
   type        = string
 }
 
+variable "client-secret" {
+  description = "The client secret of the Service Principal"
+  type        = string
+}
+
 variable "subscription-id" {
   description = "The subscription ID for Azure."
   type        = string
