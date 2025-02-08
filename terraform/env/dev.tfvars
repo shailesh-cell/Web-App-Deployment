@@ -6,5 +6,5 @@ container_name        = "flaskappdev"
 location              = "CentralIndia"
 acr_repo              = "flask-app"
 client-id              = "40a61340-0c99-45ac-b4c7-259993ee7dbf"
-subscription-Id        = "f011dba6-a332-4d8f-9f44-1409e46578aa",
-tenant-Id              = "d83a6143-104d-46a7-987d-230c352019f1",
+subscription-Id        = "f011dba6-a332-4d8f-9f44-1409e46578aa"
+tenant-Id              = "d83a6143-104d-46a7-987d-230c352019f1"
