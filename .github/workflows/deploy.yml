@@ -6,7 +6,6 @@ on:
       env:
         description: 'Environment for Deployment (dev, prod, etc.)'
         required: true
-        default: 'dev'
 
 permissions:
   id-token: write  # Required for OIDC authentication
