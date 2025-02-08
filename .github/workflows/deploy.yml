@@ -1,9 +1,12 @@
 name: Deploy Flask App to Azure
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      env:
+        description: 'Environment for Deployment (dev, prod, etc.)'
+        required: true
+        default: 'dev'
 
 permissions:
   id-token: write  # Required for OIDC authentication
