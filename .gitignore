@@ -1,0 +1,29 @@
+# Ignore Terraform State and Backup Files
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# Ignore Logs and Temporary Files
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# Ignore Large Binary Files
+*.exe
+*.dll
+*.zip
+*.tar.gz
+*.rar
+*.iso
+
+# Ignore Environment-Specific Files
+.env
+*.envrc
+.env.local
+secrets.yaml
+
+# Ignore GitHub Actions Runner Cache
+.github/workflows/_*

@@ -1,0 +1,37 @@
+name: Deploy Terraform
+
+on:
+  push:
+    branches:
+      - main \\Test\\
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    env:
+      ENV_NAME: dev  # Change this dynamically for prod, uat, etc.
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: '${{ secrets.AZURE_CREDENTIALS }}'
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: latest
+
+      - name: Terraform Init
+        run: |
+          cd infra/terraform/env
+          terraform init
+
+      - name: Terraform Apply
+        run: |
+          cd infra/terraform/$ENV_NAME
+          terraform init -backend-config=../env/backend.tfvars
+          terraform apply -var-file=terraform.tfvars -auto-approve
