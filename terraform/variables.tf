@@ -1,7 +1,7 @@
-variable "subscription_id" {}
-variable "client_id" {}
-variable "client_secret" {}
-variable "tenant_id" {}
+variable "client-id"
+variable "tenant-id"
+variable "subscription-id"
+
 
 variable "tfstate_resource_group" {}
 variable "tfstate_storage_account" {}
