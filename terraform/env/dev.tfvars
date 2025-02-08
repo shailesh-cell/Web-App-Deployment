@@ -2,7 +2,7 @@ env                   = "dev"
 resource_group_name   = "my-webapp-rg-dev"
 acr_name              = "mywebappacrdev"
 aci_name              = "mywebappacidev"
-container_name        = "flaskappdev"
+container             = "flaskappdev"
 location              = "CentralIndia"
 acr_repo              = "flask-app"
 client-secret         = var.client-secret != "" ? var.client-secret : getenv("ARM_CLIENT_SECRET")

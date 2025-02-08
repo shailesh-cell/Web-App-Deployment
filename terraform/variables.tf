@@ -58,7 +58,7 @@ variable "aci_name" {
   type        = string
 }
 
-variable "container_name" {
+variable "container" {
   description = "The name of the container within Azure Container Instance."
   type        = string
 }
