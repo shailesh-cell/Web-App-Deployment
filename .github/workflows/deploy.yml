@@ -6,9 +6,10 @@ on:
       env:
         description: 'Environment for Deployment (dev, prod, etc.)'
         required: true
+        default: 'dev'
 
 permissions:
-  id-token: write  # Required for OIDC authentication
+  id-token: write
   contents: read
 
 jobs:
@@ -19,10 +20,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Ensures full repo is pulled
+          fetch-depth: 0
 
       - name: Debug - List Files
-        run: ls -lR  # Check if Terraform files exist
+        run: ls -lR
 
       - name: Login to Azure using OIDC
         uses: azure/login@v1
@@ -59,7 +60,7 @@ jobs:
 
       - name: Plan Terraform Deployment
         working-directory: terraform
-        run: terraform plan -out=tfplan -var-file="env/${{ github.event.inputs.env }}.tfvars" # Dynamically selects environment
+        run: terraform plan -out=tfplan -var-file="env/${{ github.event.inputs.env }}.tfvars"
 
       - name: Apply Terraform Deployment
         working-directory: terraform
