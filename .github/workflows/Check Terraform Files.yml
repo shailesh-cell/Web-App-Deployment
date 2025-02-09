@@ -11,20 +11,13 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Check if Directory Exists
-        run: |
-          if [ -d "terraform/env" ]; then
-            echo "✔ Directory 'terraform/env' exists."
-          else
-            echo "❌ ERROR: Directory 'terraform/env' does not exist!"
-            exit 1
-          fi
+      - name: Check Full Path of `dev.tfvars`
+  	run: |
+    		echo "Current Directory:"
+    		pwd  # Print the current directory
 
-      - name: Check if File Exists
-        run: |
-          if [ -f "terraform/env/dev.tfvars" ]; then
-            echo "✔ File 'terraform/env/dev.tfvars' exists."
-          else
-            echo "❌ ERROR: File 'terraform/env/dev.tfvars' not found!"
-            exit 1
-          fi
+    		echo "List of Files:"
+    		ls -R  # List all files recursively
+
+    		echo "Finding dev.tfvars File:"
+    		find ${{ github.workspace }} -name "dev.tfvars"
