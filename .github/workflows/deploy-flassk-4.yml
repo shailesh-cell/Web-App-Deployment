@@ -127,7 +127,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name:s Login to Azure using OIDC
+      - name: Login to Azure using OIDC
         uses: azure/login@v1
         with:
           client-id: ${{ secrets.ARM_CLIENT_ID }}
