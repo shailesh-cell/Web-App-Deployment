@@ -36,11 +36,13 @@ jobs:
           subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
           allow-no-subscriptions: true
 
-      # Step 4: Set up Docker Buildx
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-	with:
-	  driver: containerd
+      # Step 4: Log in to Azure Container Registry (ACR)
+      - name: Log in to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
 
       # Step 5: Cache Docker layers
       - name: Cache Docker layers
@@ -50,16 +52,8 @@ jobs:
           key: ${{ runner.os }}-docker-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-docker-
-      
-      # Step 6: Log in to Azure Container Registry (ACR)
-      - name: Log in to Azure Container Registry
-        uses: azure/docker-login@v1
-        with:
-          login-server: ${{ secrets.ACR_NAME }}.azurecr.io
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
 
-      # Step 7: Build and Push Docker Image with Cache
+      # Step 6: Build and Push Docker Image with Cache
       - name: Build and Push Docker Image
         run: |
           docker buildx build --cache-from=type=registry,ref=${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest \
@@ -67,7 +61,7 @@ jobs:
             -t ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest .
           docker push ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest
 
-      # Step 8: Deploy Flask App to Azure Container Instance (ACI)
+      # Step 7: Deploy Flask App to Azure Container Instance (ACI)
       - name: Deploy Flask App to ACI
         uses: azure/aci-deploy@v1
         with:
@@ -84,13 +78,13 @@ jobs:
             ENVIRONMENT=${{ github.event.inputs.env }}  # Environment variable for Flask app
           public-ip-address: true  # Expose the app to the internet with a public IP
 
-      # Step 9: Setup Terraform
+      # Step 8: Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.3.7
 
-      # Step 10: Set environment variables for Terraform authentication
+      # Step 9: Set environment variables for Terraform authentication
       - name: Set environment variables for Terraform authentication
         run: |
           echo "ARM_CLIENT_ID=${{ secrets.ARM_CLIENT_ID }}" >> $GITHUB_ENV
@@ -98,7 +92,7 @@ jobs:
           echo "ARM_TENANT_ID=${{ secrets.ARM_TENANT_ID }}" >> $GITHUB_ENV
           echo "ARM_SUBSCRIPTION_ID=${{ secrets.ARM_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
 
-      # Step 11: Debug - Print Environment Variables (for troubleshooting)
+      # Step 10: Debug - Print Environment Variables (for troubleshooting)
       - name: Debug - Print Environment Variables
         run: |
           echo "ARM_CLIENT_ID=$ARM_CLIENT_ID"
@@ -106,7 +100,7 @@ jobs:
           echo "ARM_TENANT_ID=$ARM_TENANT_ID"
           echo "ARM_SUBSCRIPTION_ID=$ARM_SUBSCRIPTION_ID"
 
-      # Step 12: Initialize Terraform Backend
+      # Step 11: Initialize Terraform Backend
       - name: Initialize Terraform Backend
         working-directory: terraform
         run: |
@@ -116,17 +110,17 @@ jobs:
             -backend-config="container_name=${{ secrets.TFSTATE_CONTAINER }}" \
             -backend-config="key=terraform.tfstate"
 
-      # Step 13: Validate Terraform Configuration
+      # Step 12: Validate Terraform Configuration
       - name: Validate Terraform Configuration
         working-directory: terraform
         run: terraform validate
 
-      # Step 14: Plan Terraform Deployment
+      # Step 13: Plan Terraform Deployment
       - name: Plan Terraform Deployment
         working-directory: terraform
         run: terraform plan -out=tfplan -var="client-id=${{ secrets.ARM_CLIENT_ID }}" -var="client-secret=${{ secrets.ARM_CLIENT_SECRET }}" -var="tenant-id=${{ secrets.ARM_TENANT_ID }}" -var="subscription-id=${{ secrets.ARM_SUBSCRIPTION_ID }}" -var-file="env/${{ github.event.inputs.env }}.tfvars"
 
-      # Step 15: Apply Terraform Deployment
+      # Step 14: Apply Terraform Deployment
       - name: Apply Terraform Deployment
         working-directory: terraform
         run: terraform apply -auto-approve tfplan
