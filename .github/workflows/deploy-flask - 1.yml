@@ -15,6 +15,10 @@ on:
         description: 'Deployment Step (resource-group, acr, push-image, aci)'
         required: false
         default: 'all'
+      acr_name:
+        description: 'Azure Container Registry Name'
+        required: true
+        default: 'myacrname'
 
 permissions:
   id-token: write
@@ -86,12 +90,12 @@ jobs:
         run: |
           terraform apply -auto-approve \
             -target=azurerm_container_registry.acr \
-            -var-file="env/${{ github.event.inputs.env }}.tfvars"
+            -var-file="env/${{ github.event.inputs.env }}.tfvars" \
+            -var="acr_name=${{ github.event.inputs.acr_name }}"
 
-      - name: Get ACR Name from Terraform
+      - name: Get ACR Name from Input
         if: ${{ github.event.inputs.step == 'push-image' || github.event.inputs.step == 'all' }}
-        working-directory: ${{ env.WORK_DIR }}
-        run: echo "ACR_NAME=$(terraform output -raw acr_name)" >> $GITHUB_ENV
+        run: echo "ACR_NAME=${{ github.event.inputs.acr_name }}" >> $GITHUB_ENV
 
       - name: Log in to Azure Container Registry
         if: ${{ github.event.inputs.step == 'push-image' || github.event.inputs.step == 'all' }}
