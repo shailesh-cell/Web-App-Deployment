@@ -1,0 +1,148 @@
+name: Deploy Flask App to Azure
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: 'Environment for Deployment (dev, prod, etc.)'
+        required: true
+        default: 'dev'
+      action:
+        description: 'Action to perform (deploy, destroy)'
+        required: true
+        default: 'deploy'
+      step:
+        description: 'Deployment Step (resource-group, acr, push-image, aci)'
+        required: false
+        default: 'all'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Login to Azure using OIDC
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          allow-no-subscriptions: true
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.3.7
+
+      - name: Set environment variables for Terraform authentication
+        run: |
+          echo "ARM_CLIENT_ID=${{ secrets.ARM_CLIENT_ID }}" >> $GITHUB_ENV
+          echo "ARM_CLIENT_SECRET=${{ secrets.ARM_CLIENT_SECRET }}" >> $GITHUB_ENV
+          echo "ARM_TENANT_ID=${{ secrets.ARM_TENANT_ID }}" >> $GITHUB_ENV
+          echo "ARM_SUBSCRIPTION_ID=${{ secrets.ARM_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
+
+      - name: Initialize Terraform Backend
+        working-directory: terraform
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${{ secrets.TFSTATE_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ secrets.TFSTATE_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ secrets.TFSTATE_CONTAINER }}" \
+            -backend-config="key=terraform.tfstate"
+
+      - name: Validate Terraform Configuration
+        working-directory: terraform
+        run: terraform validate
+
+      - name: Create Resource Group
+        if: github.event.inputs.action == 'deploy' && (github.event.inputs.step == 'resource-group' || github.event.inputs.step == 'all')
+        working-directory: terraform
+        run: |
+          terraform apply -auto-approve -target=azurerm_resource_group.rg -var="client-id=${{ secrets.ARM_CLIENT_ID }}" -var="client-secret=${{ secrets.ARM_CLIENT_SECRET }}" -var="tenant-id=${{ secrets.ARM_TENANT_ID }}" -var="subscription-id=${{ secrets.ARM_SUBSCRIPTION_ID }}" -var-file="env/${{ github.event.inputs.env }}.tfvars"
+
+      - name: Create ACR
+        if: github.event.inputs.action == 'deploy' && (github.event.inputs.step == 'acr' || github.event.inputs.step == 'all')
+        working-directory: terraform
+        run: |
+          terraform apply -auto-approve -target=azurerm_container_registry.acr -var="client-id=${{ secrets.ARM_CLIENT_ID }}" -var="client-secret=${{ secrets.ARM_CLIENT_SECRET }}" -var="tenant-id=${{ secrets.ARM_TENANT_ID }}" -var="subscription-id=${{ secrets.ARM_SUBSCRIPTION_ID }}" -var-file="env/${{ github.event.inputs.env }}.tfvars"
+
+      - name: Get ACR Name from Terraform
+        if: github.event.inputs.action == 'deploy' && (github.event.inputs.step == 'push-image' || github.event.inputs.step == 'all')
+        working-directory: terraform
+        run: echo "ACR_NAME=$(terraform output -raw acr_name)" >> $GITHUB_ENV
+
+      - name: Log in to Azure Container Registry
+        if: github.event.inputs.action == 'deploy' && (github.event.inputs.step == 'push-image' || github.event.inputs.step == 'all')
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.ACR_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        if: github.event.inputs.action == 'deploy' && (github.event.inputs.step == 'push-image' || github.event.inputs.step == 'all')
+        run: |
+          docker buildx build --cache-from=type=registry,ref=${{ env.ACR_NAME }}.azurecr.io/flask-app:latest \
+            -t ${{ env.ACR_NAME }}.azurecr.io/flask-app:${{ github.sha }} \
+            -t ${{ env.ACR_NAME }}.azurecr.io/flask-app:latest .
+          docker push ${{ env.ACR_NAME }}.azurecr.io/flask-app:${{ github.sha }}
+          docker push ${{ env.ACR_NAME }}.azurecr.io/flask-app:latest
+
+      - name: Deploy Flask App to ACI
+        if: github.event.inputs.action == 'deploy' && (github.event.inputs.step == 'aci' || github.event.inputs.step == 'all')
+        uses: azure/aci-deploy@v1
+        with:
+          resource-group: ${{ secrets.RESOURCE_GROUP }}
+          location: CentralIndia
+          name: flask-app-${{ github.event.inputs.env }}
+          image: ${{ env.ACR_NAME }}.azurecr.io/flask-app:latest
+          cpu: 1
+          memory: 1.5
+          environment-variables: |
+            ENVIRONMENT=${{ github.event.inputs.env }}
+          dns-name-label: flask-app-${{ github.event.inputs.env }}
+          ports: 80
+
+  destroy:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.action == 'destroy'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Login to Azure using OIDC
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          allow-no-subscriptions: true
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.3.7
+
+      - name: Set environment variables for Terraform authentication
+        run: |
+          echo "ARM_CLIENT_ID=${{ secrets.ARM_CLIENT_ID }}" >> $GITHUB_ENV
+          echo "ARM_CLIENT_SECRET=${{ secrets.ARM_CLIENT_SECRET }}" >> $GITHUB_ENV
+          echo "ARM_TENANT_ID=${{ secrets.ARM_TENANT_ID }}" >> $GITHUB_ENV
+          echo "ARM_SUBSCRIPTION_ID=${{ secrets.ARM_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
+
+      - name: Destroy All Resources
+        working-directory: terraform
+        run: |
+          terraform destroy -auto-approve -var="client-id=${{ secrets.ARM_CLIENT_ID }}" -var="client-secret=${{ secrets.ARM_CLIENT_SECRET }}" -var="tenant-id=${{ secrets.ARM_TENANT_ID }}" -var="subscription-id=${{ secrets.ARM_SUBSCRIPTION_ID }}" -var-file="env/${{ github.event.inputs.env }}.tfvars"
