@@ -68,9 +68,10 @@ jobs:
             -backend-config="key=terraform.tfstate"
 
       - name: Validate Terraform Configuration
-        working-directory: terraform
+        working-directory: terraform  
         run: terraform validate
 
+	# Create RG #
       - name: Create Resource Group
         if: ${{ github.event.inputs.step == 'resource-group' || github.event.inputs.step == 'all' }}
         working-directory: terraform
