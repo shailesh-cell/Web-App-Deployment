@@ -1,4 +1,4 @@
-name: Deploy Flask App to Azure
+name: Deploy and Manage Flask App on Azure
 
 on:
   workflow_dispatch:
