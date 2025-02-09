@@ -71,10 +71,10 @@ jobs:
         if: ${{ github.event.inputs.step == 'resource-group' || github.event.inputs.step == 'all' }}
         working-directory: ${{ github.workspace }}/terraform
         run: |
-          if [ -f env/${{ github.event.inputs.env }}.tfvars ]; then
-            terraform apply -auto-approve -target=azurerm_resource_group.rg -var-file="env/${{ github.event.inputs.env }}.tfvars"
+          if [ --f "${{ github.workspace }}/terraform/env/${{ github.event.inputs.env }}.tfvars" ]; then
+            terraform apply -auto-approve -target=azurerm_resource_group.rg -var-file="${{ github.workspace }}/terraform/env/${{ github.event.inputs.env }}.tfvars"
           else
-            echo "Error: env/${{ github.event.inputs.env }}.tfvars not found!"
+            echo "Error: File not found at ${{ github.workspace }}/terraform/env/${{ github.event.inputs.env }}.tfvars"
             exit 1
           fi
 
