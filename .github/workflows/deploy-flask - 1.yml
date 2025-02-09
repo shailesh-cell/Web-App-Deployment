@@ -69,7 +69,7 @@ jobs:
 
       - name: Create Resource Group
         if: ${{ github.event.inputs.step == 'resource-group' || github.event.inputs.step == 'all' }}
-        working-directory: ${{ env.WORK_DIR }}
+        working-directory: ${{ github.workspace }}/terraform
         run: |
           if [ -f env/${{ github.event.inputs.env }}.tfvars ]; then
             terraform apply -auto-approve -target=azurerm_resource_group.rg -var-file="env/${{ github.event.inputs.env }}.tfvars"
