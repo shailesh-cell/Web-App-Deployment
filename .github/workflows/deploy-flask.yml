@@ -112,7 +112,7 @@ jobs:
         uses: azure/aci-deploy@v1
         with:
           resource-group: ${{ secrets.RESOURCE_GROUP }}  # The Azure resource group name
-	  location: CentralIndia
+	  location: CentralIndia  # Specify the Azure region directly
           name: flask-app-${{ github.event.inputs.env }}  # The name of the container in ACI
           image: ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest  # The image to deploy from ACR
           cpu: 1  # CPU for the container
