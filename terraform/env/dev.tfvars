@@ -1,5 +1,5 @@
 env                   = "dev"
-resource_group_name   = "my-webapp-rg-dev"
+resource_group_name   = "my-webapp-dev-rg"
 acr_name              = "mywebappacrdev"
 aci_name              = "mywebappacidev"
 container             = "flaskappdev"
