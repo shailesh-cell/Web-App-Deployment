@@ -70,7 +70,7 @@ jobs:
         if: github.event.inputs.action == 'deploy'
         working-directory: terraform
         run: |
-          terraform plan -out=tfplan -var-file="env/${{ github.event.inputs.env }}.tfvars"
+          terraform plan -out=tfplan -var="client-id=${{ secrets.ARM_CLIENT_ID }}" -var="client-secret=${{ secrets.ARM_CLIENT_SECRET }}" -var="tenant-id=${{ secrets.ARM_TENANT_ID }}" -var="subscription-id=${{ secrets.ARM_SUBSCRIPTION_ID }}" -var-file="env/${{ github.event.inputs.env }}.tfvars"
           terraform apply -auto-approve tfplan
 
       # Step 8: Retrieve ACR Name from Terraform Output
