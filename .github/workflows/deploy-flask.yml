@@ -69,13 +69,10 @@ jobs:
           image: ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest  # The image to deploy from ACR
           cpu: 1  # CPU for the container
           memory: 1.5  # Memory for the container
-          tags: 'flask,app'  # Optional tags for the container
-          login-server: ${{ secrets.ACR_NAME }}.azurecr.io  # Your ACR login server
-          username: ${{ secrets.ACR_USERNAME }}  # ACR username (if needed for login)
-          password: ${{ secrets.ACR_PASSWORD }}  # ACR password (if needed for login)
           environment-variables: |
             ENVIRONMENT=${{ github.event.inputs.env }}  # Environment variable for Flask app
-          public-ip-address: true  # Expose the app to the internet with a public IP
+          dns-name-label: flask-app-${{ github.event.inputs.env }}  # DNS name for public access
+          ports: 80  # Exposing port 80 for the app
 
       # Step 8: Setup Terraform
       - name: Setup Terraform
