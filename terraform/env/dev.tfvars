@@ -10,3 +10,5 @@ client-id             = var.client-id != "" ? var.client-id : getenv("ARM_CLIENT
 tenant-id             = var.tenant-id != "" ? var.tenant-id : getenv("ARM_TENANT_ID")
 subscription-id       = var.subscription-id != "" ? var.subscription-id : getenv("ARM_SUBSCRIPTION_ID")
 tfstate_container     = "tfstate"
+tfstate_resource_group = "my-webapp-rg"
+tfstate_storage_account = "terraformstateacctk8"
