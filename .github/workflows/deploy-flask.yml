@@ -7,6 +7,10 @@ on:
         description: 'Environment for Deployment (dev, prod, etc.)'
         required: true
         default: 'dev'
+      action:
+        description: 'Action to perform (deploy, destroy)'
+        required: true
+        default: 'deploy'
 
 permissions:
   id-token: write
@@ -53,11 +57,13 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      # Step 6: Build and Push Docker Image (without cache export)
+      # Step 6: Build and Push Docker Image
       - name: Build and Push Docker Image
         run: |
           docker buildx build --cache-from=type=registry,ref=${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest \
+            -t ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:${{ github.sha }} \
             -t ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest .
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:${{ github.sha }}
           docker push ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest
 
       # Step 7: Setup Terraform
@@ -74,15 +80,7 @@ jobs:
           echo "ARM_TENANT_ID=${{ secrets.ARM_TENANT_ID }}" >> $GITHUB_ENV
           echo "ARM_SUBSCRIPTION_ID=${{ secrets.ARM_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
 
-      # Step 9: Debug - Print Environment Variables (for troubleshooting)
-      - name: Debug - Print Environment Variables
-        run: |
-          echo "ARM_CLIENT_ID=$ARM_CLIENT_ID"
-          echo "ARM_CLIENT_SECRET=$ARM_CLIENT_SECRET"
-          echo "ARM_TENANT_ID=$ARM_TENANT_ID"
-          echo "ARM_SUBSCRIPTION_ID=$ARM_SUBSCRIPTION_ID"
-
-      # Step 10: Initialize Terraform Backend
+      # Step 9: Initialize Terraform Backend
       - name: Initialize Terraform Backend
         working-directory: terraform
         run: |
@@ -92,37 +90,43 @@ jobs:
             -backend-config="container_name=${{ secrets.TFSTATE_CONTAINER }}" \
             -backend-config="key=terraform.tfstate"
 
-      # Step 11: Validate Terraform Configuration
+      # Step 10: Validate Terraform Configuration
       - name: Validate Terraform Configuration
         working-directory: terraform
         run: terraform validate
 
-      # Step 12: Plan Terraform Deployment
-      - name: Plan Terraform Deployment
+      # Step 11: Conditional Deploy/Destroy Step
+      - name: Terraform Plan & Apply or Destroy
         working-directory: terraform
-        run: terraform plan -out=tfplan -var="client-id=${{ secrets.ARM_CLIENT_ID }}" -var="client-secret=${{ secrets.ARM_CLIENT_SECRET }}" -var="tenant-id=${{ secrets.ARM_TENANT_ID }}" -var="subscription-id=${{ secrets.ARM_SUBSCRIPTION_ID }}" -var-file="env/${{ github.event.inputs.env }}.tfvars"
+        run: |
+          if [[ "${{ github.event.inputs.action }}" == "deploy" ]]; then
+            terraform plan -out=tfplan -var-file="env/${{ github.event.inputs.env }}.tfvars"
+            terraform apply -auto-approve tfplan
+          elif [[ "${{ github.event.inputs.action }}" == "destroy" ]]; then
+            terraform destroy -auto-approve -var-file="env/${{ github.event.inputs.env }}.tfvars"
+          else
+            echo "Invalid action: ${{ github.event.inputs.action }}"
+            exit 1
+          fi
 
-      # Step 13: Apply Terraform Deployment
-      - name: Apply Terraform Deployment
-        working-directory: terraform
-        run: terraform apply -auto-approve tfplan
-
-      # Step 14: Deploy Flask App to Azure Container Instance (ACI)
+      # Step 12: Deploy Flask App to Azure Container Instance (ACI) (Only if deploying)
       - name: Deploy Flask App to ACI
+        if: github.event.inputs.action == 'deploy'
         uses: azure/aci-deploy@v1
         with:
-          resource-group: ${{ secrets.RESOURCE_GROUP }}  # The Azure resource group name
-	  location: CentralIndia  # Specify the Azure region directly
-          name: flask-app-${{ github.event.inputs.env }}  # The name of the container in ACI
-          image: ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest  # The image to deploy from ACR
-          cpu: 1  # CPU for the container
-          memory: 1.5  # Memory for the container
+          resource-group: ${{ secrets.RESOURCE_GROUP }}
+          location: CentralIndia
+          name: flask-app-${{ github.event.inputs.env }}
+          image: ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest
+          cpu: 1
+          memory: 1.5
           environment-variables: |
-            ENVIRONMENT=${{ github.event.inputs.env }}  # Environment variable for Flask app
-          dns-name-label: flask-app-${{ github.event.inputs.env }}  # DNS name for public access
-          ports: 80  # Exposing port 80 for the app
+            ENVIRONMENT=${{ github.event.inputs.env }}
+          dns-name-label: flask-app-${{ github.event.inputs.env }}
+          ports: 80
 
-      # Step 15: Show Terraform Outputs (Optional - for troubleshooting and verification)
+      # Step 13: Show Terraform Outputs (for verification)
       - name: Show Terraform Outputs
+        if: github.event.inputs.action == 'deploy'
         run: terraform output
         working-directory: terraform
