@@ -1,23 +1,3 @@
-variable "client-id" {
-  description = "The client ID for the Service Principal."
-  type        = string
-}
-
-variable "tenant-id" {
-  description = "The tenant ID for the Azure Active Directory."
-  type        = string
-}
-
-variable "client-secret" {
-  description = "The client secret of the Service Principal"
-  type        = string
-}
-
-variable "subscription-id" {
-  description = "The subscription ID for Azure."
-  type        = string
-}
-
 variable "tfstate_resource_group" {
   description = "The resource group where the Terraform state will be stored."
   type        = string
