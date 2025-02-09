@@ -107,6 +107,7 @@ jobs:
 
       - name: Build and Push Docker Image
         if: ${{ github.event.inputs.step == 'push-image' || github.event.inputs.step == 'all' }}
+	working-directory: ${{ env.WORK_DIR }}
         run: |
           docker buildx build --cache-from=type=registry,ref=${{ env.ACR_NAME }}.azurecr.io/flask-app:latest \
             -t ${{ env.ACR_NAME }}.azurecr.io/flask-app:${{ github.sha }} \
