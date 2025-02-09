@@ -70,12 +70,17 @@ jobs:
       - name: Create Resource Group
         if: ${{ github.event.inputs.step == 'resource-group' || github.event.inputs.step == 'all' }}
         working-directory: ${{ github.workspace }}/terraform
-	env:
         run: |
-          if [ --f "${{ github.workspace }}/terraform/env/${{ github.event.inputs.env }}.tfvars" ]; then
-            terraform apply -auto-approve -target=azurerm_resource_group.rg -var="client-id=${{ secrets.ARM_CLIENT_ID }}" -var="client-secret=${{ secrets.ARM_CLIENT_SECRET }}" -var="tenant-id=${{ secrets.ARM_TENANT_ID }}" -var="subscription-id=${{ secrets.ARM_SUBSCRIPTION_ID }}" -var-file="${{ github.workspace }}/terraform/env/${{ github.event.inputs.env }}.tfvars"
+          if [ -f "${{ github.workspace }}/terraform/env/${{ github.event.inputs.env }}.tfvars" ]; then
+            terraform apply -auto-approve \
+              -target=azurerm_resource_group.rg \
+              -var="client-id=${{ secrets.ARM_CLIENT_ID }}" \
+              -var="client-secret=${{ secrets.ARM_CLIENT_SECRET }}" \
+              -var="tenant-id=${{ secrets.ARM_TENANT_ID }}" \
+              -var="subscription-id=${{ secrets.ARM_SUBSCRIPTION_ID }}" \
+              -var-file="${{ github.workspace }}/terraform/env/${{ github.event.inputs.env }}.tfvars"
           else
-            echo "Error: File not found at ${{ github.workspace }}/terraform/env/${{ github.event.inputs.env }}.tfvars"
+            echo "Error: env/${{ github.event.inputs.env }}.tfvars not found!"
             exit 1
           fi
 
@@ -83,7 +88,9 @@ jobs:
         if: ${{ github.event.inputs.step == 'acr' || github.event.inputs.step == 'all' }}
         working-directory: ${{ env.WORK_DIR }}
         run: |
-          terraform apply -auto-approve -target=azurerm_container_registry.acr -var-file="env/${{ github.event.inputs.env }}.tfvars"
+          terraform apply -auto-approve \
+            -target=azurerm_container_registry.acr \
+            -var-file="env/${{ github.event.inputs.env }}.tfvars"
 
       - name: Get ACR Name from Terraform
         if: ${{ github.event.inputs.step == 'push-image' || github.event.inputs.step == 'all' }}
@@ -157,7 +164,7 @@ jobs:
       - name: Destroy All Resources
         working-directory: ${{ env.WORK_DIR }}
         run: |
-          if [ -f env/${{ github.event.inputs.env }}.tfvars ]; then
+          if [ -f "env/${{ github.event.inputs.env }}.tfvars" ]; then
             terraform destroy -auto-approve -var-file="env/${{ github.event.inputs.env }}.tfvars"
           else
             echo "Error: env/${{ github.event.inputs.env }}.tfvars not found!"
