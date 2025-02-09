@@ -64,24 +64,24 @@ jobs:
         run: terraform validate
 
       - name: Create Resource Group
-        if: github.event.inputs.action == 'deploy' && (github.event.inputs.step == 'resource-group' || github.event.inputs.step == 'all')
+        if: ${{ github.event.inputs.action == 'deploy' && (github.event.inputs.step == 'resource-group' || github.event.inputs.step == 'all') }}
         working-directory: terraform
         run: |
           terraform apply -auto-approve -target=azurerm_resource_group.rg -var="client-id=${{ secrets.ARM_CLIENT_ID }}" -var="client-secret=${{ secrets.ARM_CLIENT_SECRET }}" -var="tenant-id=${{ secrets.ARM_TENANT_ID }}" -var="subscription-id=${{ secrets.ARM_SUBSCRIPTION_ID }}" -var-file="env/${{ github.event.inputs.env }}.tfvars"
 
       - name: Create ACR
-        if: github.event.inputs.action == 'deploy' && (github.event.inputs.step == 'acr' || github.event.inputs.step == 'all')
+        if: ${{ github.event.inputs.action == 'deploy' && (github.event.inputs.step == 'acr' || github.event.inputs.step == 'all') }}
         working-directory: terraform
         run: |
           terraform apply -auto-approve -target=azurerm_container_registry.acr -var="client-id=${{ secrets.ARM_CLIENT_ID }}" -var="client-secret=${{ secrets.ARM_CLIENT_SECRET }}" -var="tenant-id=${{ secrets.ARM_TENANT_ID }}" -var="subscription-id=${{ secrets.ARM_SUBSCRIPTION_ID }}" -var-file="env/${{ github.event.inputs.env }}.tfvars"
 
       - name: Get ACR Name from Terraform
-        if: github.event.inputs.action == 'deploy' && (github.event.inputs.step == 'push-image' || github.event.inputs.step == 'all')
+        if: ${{ github.event.inputs.action == 'deploy' && (github.event.inputs.step == 'push-image' || github.event.inputs.step == 'all') }}
         working-directory: terraform
         run: echo "ACR_NAME=$(terraform output -raw acr_name)" >> $GITHUB_ENV
 
       - name: Log in to Azure Container Registry
-        if: github.event.inputs.action == 'deploy' && (github.event.inputs.step == 'push-image' || github.event.inputs.step == 'all')
+        if: ${{ github.event.inputs.action == 'deploy' && (github.event.inputs.step == 'push-image' || github.event.inputs.step == 'all') }}
         uses: azure/docker-login@v1
         with:
           login-server: ${{ env.ACR_NAME }}.azurecr.io
@@ -89,7 +89,7 @@ jobs:
           password: ${{ secrets.ACR_PASSWORD }}
 
       - name: Build and Push Docker Image
-        if: github.event.inputs.action == 'deploy' && (github.event.inputs.step == 'push-image' || github.event.inputs.step == 'all')
+        if: ${{ github.event.inputs.action == 'deploy' && (github.event.inputs.step == 'push-image' || github.event.inputs.step == 'all') }}
         run: |
           docker buildx build --cache-from=type=registry,ref=${{ env.ACR_NAME }}.azurecr.io/flask-app:latest \
             -t ${{ env.ACR_NAME }}.azurecr.io/flask-app:${{ github.sha }} \
@@ -98,7 +98,7 @@ jobs:
           docker push ${{ env.ACR_NAME }}.azurecr.io/flask-app:latest
 
       - name: Deploy Flask App to ACI
-        if: github.event.inputs.action == 'deploy' && (github.event.inputs.step == 'aci' || github.event.inputs.step == 'all')
+        if: ${{ github.event.inputs.action == 'deploy' && (github.event.inputs.step == 'aci' || github.event.inputs.step == 'all') }}
         uses: azure/aci-deploy@v1
         with:
           resource-group: ${{ secrets.RESOURCE_GROUP }}
@@ -107,14 +107,13 @@ jobs:
           image: ${{ env.ACR_NAME }}.azurecr.io/flask-app:latest
           cpu: 1
           memory: 1.5
-          environment-variables: |
-            ENVIRONMENT=${{ github.event.inputs.env }}
+          environment-variables: ENVIRONMENT=${{ github.event.inputs.env }}
           dns-name-label: flask-app-${{ github.event.inputs.env }}
           ports: 80
 
-  destroy:
+destroy:
     runs-on: ubuntu-latest
-    if: github.event.inputs.action == 'destroy'
+    if: ${{ github.event.inputs.action == 'destroy' }}
 
     steps:
       - name: Checkout Repository
