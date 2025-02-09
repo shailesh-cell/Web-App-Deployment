@@ -13,11 +13,11 @@ jobs:
 
       - name: Check Full Path of `dev.tfvars`
   	run: |
-    		echo "Current Directory:"
-    		pwd  # Print the current directory
+    	  echo "Current Directory:"
+    	  pwd  # Print the current directory
 
-    		echo "List of Files:"
-    		ls -R  # List all files recursively
+    	  echo "List of Files:"
+    	  ls -R  # List all files recursively
 
-    		echo "Finding dev.tfvars File:"
-    		find ${{ github.workspace }} -name "dev.tfvars"
+    	  echo "Finding dev.tfvars File:"
+    	  find ${{ github.workspace }} -name "dev.tfvars"
