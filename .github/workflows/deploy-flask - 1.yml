@@ -71,13 +71,9 @@ jobs:
         if: ${{ github.event.inputs.step == 'resource-group' || github.event.inputs.step == 'all' }}
         working-directory: ${{ github.workspace }}/terraform
 	env:
-	 ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
-         ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
-         ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
-         ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
         run: |
           if [ --f "${{ github.workspace }}/terraform/env/${{ github.event.inputs.env }}.tfvars" ]; then
-            terraform apply -auto-approve -target=azurerm_resource_group.rg -var-file="${{ github.workspace }}/terraform/env/${{ github.event.inputs.env }}.tfvars"
+            terraform apply -auto-approve -target=azurerm_resource_group.rg -var="client-id=${{ secrets.ARM_CLIENT_ID }}" -var="client-secret=${{ secrets.ARM_CLIENT_SECRET }}" -var="tenant-id=${{ secrets.ARM_TENANT_ID }}" -var="subscription-id=${{ secrets.ARM_SUBSCRIPTION_ID }}" -var-file="${{ github.workspace }}/terraform/env/${{ github.event.inputs.env }}.tfvars"
           else
             echo "Error: File not found at ${{ github.workspace }}/terraform/env/${{ github.event.inputs.env }}.tfvars"
             exit 1
