@@ -74,10 +74,6 @@ jobs:
           if [ -f "${{ github.workspace }}/terraform/env/${{ github.event.inputs.env }}.tfvars" ]; then
             terraform apply -auto-approve \
               -target=azurerm_resource_group.rg \
-              -var="client-id=${{ secrets.ARM_CLIENT_ID }}" \
-              -var="client-secret=${{ secrets.ARM_CLIENT_SECRET }}" \
-              -var="tenant-id=${{ secrets.ARM_TENANT_ID }}" \
-              -var="subscription-id=${{ secrets.ARM_SUBSCRIPTION_ID }}" \
               -var-file="${{ github.workspace }}/terraform/env/${{ github.event.inputs.env }}.tfvars"
           else
             echo "Error: env/${{ github.event.inputs.env }}.tfvars not found!"
