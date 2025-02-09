@@ -105,8 +105,10 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
+      - name: Set Working Directory to flask-app
+  	run: echo "WORK_DIR=${{ github.workspace }}/flask-app" >> $GITHUB_ENV
+
       - name: Build and Push Docker Image
-	working-directory: ${{ env.WORK_DIR }}
         if: ${{ github.event.inputs.step == 'push-image' || github.event.inputs.step == 'all' }}
         run: |
           docker buildx build --cache-from=type=registry,ref=${{ env.ACR_NAME }}.azurecr.io/flask-app:latest \
