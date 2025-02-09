@@ -64,9 +64,10 @@ jobs:
     if: github.event.inputs.step == 'resource-group' || github.event.inputs.step == 'all'
     steps:
       - name: Create Resource Group
-        working-directory: my-webapp-deployment
+        if: github.event.inputs.action == 'deploy' && (github.event.inputs.step == 'resource-group' || github.event.inputs.step == 'all')
+        working-directory: terraform
         run: |
-          terraform apply -auto-approve -var="client-id=${{ secrets.ARM_CLIENT_ID }}" -var="client-secret=${{ secrets.ARM_CLIENT_SECRET }}" -var="tenant-id=${{ secrets.ARM_TENANT_ID }}" -var="subscription-id=${{ secrets.ARM_SUBSCRIPTION_ID }}" -var-file="env/${{ github.event.inputs.env }}.tfvars"
+          terraform apply -auto-approve -target=azurerm_resource_group.rg -var="client-id=${{ secrets.ARM_CLIENT_ID }}" -var="client-secret=${{ secrets.ARM_CLIENT_SECRET }}" -var="tenant-id=${{ secrets.ARM_TENANT_ID }}" -var="subscription-id=${{ secrets.ARM_SUBSCRIPTION_ID }}" -var-file="env/${{ github.event.inputs.env }}.tfvars"
 
   acr:
     needs: setup
