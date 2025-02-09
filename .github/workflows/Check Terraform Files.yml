@@ -1,0 +1,40 @@
+name: Check Terraform Files
+
+on:
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
+
+jobs:
+  check-files:
+    runs-on: ubuntu-latest  # GitHub-hosted runner (Linux)
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Debug: List all files in the repository
+        run: |
+          echo "Current Working Directory: $(pwd)"
+          echo "Listing all files in the repository:"
+          ls -R ${{ github.workspace }}
+
+      - name: Debug: Check Terraform files
+        run: |
+          echo "Checking terraform/env/ directory..."
+          if [ -d ${{ github.workspace }}/terraform/env ]; then
+            echo "✔ Directory 'terraform/env/' exists."
+          else
+            echo "❌ ERROR: Directory 'terraform/env/' does not exist!"
+            exit 1
+          fi
+
+          echo "Checking env/dev.tfvars file..."
+          if [ -f ${{ github.workspace }}/terraform/env/dev.tfvars ]; then
+            echo "✔ File 'env/dev.tfvars' exists."
+          else
+            echo "❌ ERROR: File 'env/dev.tfvars' not found!"
+            exit 1
+          fi
+
+      - name: Debug: List files inside terraform/env/
+        run: |
+          ls -l ${{ github.workspace }}/terraform/env || echo "❌ ERROR: env/ directory not found!"
