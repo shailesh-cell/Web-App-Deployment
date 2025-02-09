@@ -81,7 +81,7 @@ jobs:
       - name: Get ACR Name from Terraform
         if: github.event.inputs.action == 'deploy' && (github.event.inputs.step == 'push-image' || github.event.inputs.step == 'all')
         working-directory: terraform
-        run: echo "ACR_NAME=$(terraform output -raw acr_name)" >> $GITHUB_ENV
+        run: echo "ACR_NAME=$(terraform output -json acr_name | jq -r .)" >> $GITHUB_ENV
 
       # Step 4: Log in to ACR
       - name: Log in to Azure Container Registry
