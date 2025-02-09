@@ -40,7 +40,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      # Step 5: Log in to Azure Container Registry (ACR)
+      # Step 5: Cache Docker layers
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache  # Cache location for Docker layers
+          key: ${{ runner.os }}-docker-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-docker-
+      
+      # Step 6: Log in to Azure Container Registry (ACR)
       - name: Log in to Azure Container Registry
         uses: azure/docker-login@v1
         with:
@@ -48,19 +57,38 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      # Step 6: Build and Push Docker Image to ACR
+      # Step 7: Build and Push Docker Image with Cache
       - name: Build and Push Docker Image
         run: |
-          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest .
+          docker buildx build --cache-from=type=registry,ref=${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest \
+            --cache-to=type=registry,ref=${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest,mode=push \
+            -t ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest .
           docker push ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest
 
-      # Step 7: Setup Terraform
+      # Step 8: Deploy Flask App to Azure Container Instance (ACI)
+      - name: Deploy Flask App to ACI
+        uses: azure/aci-deploy@v1
+        with:
+          resource-group: ${{ secrets.RESOURCE_GROUP }}  # The Azure resource group name
+          name: flask-app  # The name of the container in ACI
+          image: ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest  # The image to deploy from ACR
+          cpu: 1  # CPU for the container
+          memory: 1.5  # Memory for the container
+          tags: 'flask,app'  # Optional tags for the container
+          login-server: ${{ secrets.ACR_NAME }}.azurecr.io  # Your ACR login server
+          username: ${{ secrets.ACR_USERNAME }}  # ACR username (if needed for login)
+          password: ${{ secrets.ACR_PASSWORD }}  # ACR password (if needed for login)
+          environment-variables: |
+            ENVIRONMENT=${{ github.event.inputs.env }}  # Environment variable for Flask app
+          public-ip-address: true  # Expose the app to the internet with a public IP
+
+      # Step 9: Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.3.7
 
-      # Step 8: Set environment variables for Terraform authentication
+      # Step 10: Set environment variables for Terraform authentication
       - name: Set environment variables for Terraform authentication
         run: |
           echo "ARM_CLIENT_ID=${{ secrets.ARM_CLIENT_ID }}" >> $GITHUB_ENV
@@ -68,7 +96,7 @@ jobs:
           echo "ARM_TENANT_ID=${{ secrets.ARM_TENANT_ID }}" >> $GITHUB_ENV
           echo "ARM_SUBSCRIPTION_ID=${{ secrets.ARM_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
 
-      # Step 9: Debug - Print Environment Variables (for troubleshooting)
+      # Step 11: Debug - Print Environment Variables (for troubleshooting)
       - name: Debug - Print Environment Variables
         run: |
           echo "ARM_CLIENT_ID=$ARM_CLIENT_ID"
@@ -76,7 +104,7 @@ jobs:
           echo "ARM_TENANT_ID=$ARM_TENANT_ID"
           echo "ARM_SUBSCRIPTION_ID=$ARM_SUBSCRIPTION_ID"
 
-      # Step 10: Initialize Terraform Backend
+      # Step 12: Initialize Terraform Backend
       - name: Initialize Terraform Backend
         working-directory: terraform
         run: |
@@ -86,17 +114,17 @@ jobs:
             -backend-config="container_name=${{ secrets.TFSTATE_CONTAINER }}" \
             -backend-config="key=terraform.tfstate"
 
-      # Step 11: Validate Terraform Configuration
+      # Step 13: Validate Terraform Configuration
       - name: Validate Terraform Configuration
         working-directory: terraform
         run: terraform validate
 
-      # Step 12: Plan Terraform Deployment
+      # Step 14: Plan Terraform Deployment
       - name: Plan Terraform Deployment
         working-directory: terraform
         run: terraform plan -out=tfplan -var="client-id=${{ secrets.ARM_CLIENT_ID }}" -var="client-secret=${{ secrets.ARM_CLIENT_SECRET }}" -var="tenant-id=${{ secrets.ARM_TENANT_ID }}" -var="subscription-id=${{ secrets.ARM_SUBSCRIPTION_ID }}" -var-file="env/${{ github.event.inputs.env }}.tfvars"
 
-      # Step 13: Apply Terraform Deployment
+      # Step 15: Apply Terraform Deployment
       - name: Apply Terraform Deployment
         working-directory: terraform
         run: terraform apply -auto-approve tfplan
