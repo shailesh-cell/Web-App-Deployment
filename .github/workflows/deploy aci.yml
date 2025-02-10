@@ -67,4 +67,4 @@ jobs:
 
       - name: Apply Terraform to Deploy ACI
         working-directory: terraform
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve -target=azurerm_container_group.aci -var-file="env/dev.tfvars"  # Change "dev" if needed
