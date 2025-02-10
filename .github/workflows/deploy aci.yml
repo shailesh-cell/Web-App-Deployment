@@ -55,11 +55,7 @@ jobs:
       - name: Extract ACR Name from Terraform Output
         working-directory: terraform
         run: |
-          ACR_NAME=$(terraform output -raw acr_name 2>/dev/null || echo "")
-          if [[ -z "$ACR_NAME" ]]; then
-            echo "ACR_NAME not found in Terraform output, falling back to secret"
-            ACR_NAME="${{ secrets.ACR_NAME }}"
-          fi
+          ACR_NAME=$(grep '^acr_name' env/dev.tfvars | awk -F '=' '{print $2}' | tr -d ' "')
           echo "ACR_NAME=$ACR_NAME" >> $GITHUB_ENV
           echo "Extracted ACR Name: $ACR_NAME"
 
