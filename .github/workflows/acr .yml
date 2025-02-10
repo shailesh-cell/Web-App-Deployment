@@ -1,11 +1,7 @@
 name: Run Azure Login and Create ACR
 
 on:
-  
   workflow_dispatch:  # Allows manual execution of both jobs
-
-
-name: 
 
 jobs:
   login:
