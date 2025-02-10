@@ -83,11 +83,6 @@ jobs:
         run: |
           terraform apply -auto-approve -target=azurerm_container_registry.acr -var-file="env/${{ github.event.inputs.env }}.tfvars"
 
-      - name: Get ACR Name from Terraform
-        if: ${{ github.event.inputs.step == 'push-image' || github.event.inputs.step == 'all' }}
-        working-directory: terraform
-        run: echo "ACR_NAME=$(terraform output -raw acr_name)" >> $GITHUB_ENV
-
       - name: Log in to Azure Container Registry
         if: ${{ github.event.inputs.step == 'push-image' || github.event.inputs.step == 'all' }}
         uses: azure/docker-login@v1
