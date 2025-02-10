@@ -1,51 +1,30 @@
-name: Test Azure Login
+# File: .github/workflows/workflow.yml
 
-on:
-  workflow_dispatch:
+on: [push]
 
-permissions:
-  id-token: write  # Required for OIDC authentication
-  contents: read
+name: Run Azure Login With a Service Principal Secret
 
 jobs:
-  login:
+
+  build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
 
-      - name: Enable Debugging (Optional)
-        run: |
-          echo "Enable Azure CLI Debugging"
-          echo "AZURE_HTTP_USER_AGENT=GITHUB-ACTIONS" >> $GITHUB_ENV
-          echo "AZURE_CORE_ONLY_SHOW_ERRORS=False" >> $GITHUB_ENV
-          echo "AZURE_CORE_OUTPUT=jsonc" >> $GITHUB_ENV
-          echo "Running in debug mode..."
+    - uses: azure/login@v2
+      with:
+        creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
+        enable-AzPSSession: true
 
-      - name: Print Environment Variables (Debugging Step)
-        run: |
-          echo "Checking if GitHub Environment Variables are set..."
-          env | grep 'ARM_' || true  # Print Azure secrets (masked)
+    - name: Azure CLI script
+      uses: azure/cli@v2
+      with:
+        azcliversion: latest
+        inlineScript: |
+          az account show
 
-      - name: Check GitHub Actions OIDC Token (Debugging Step)
-        run: |
-          echo "Checking if ACTIONS_ID_TOKEN_REQUEST_URL is available..."
-          if [ -z "$ACTIONS_ID_TOKEN_REQUEST_URL" ]; then
-            echo "ERROR: ACTIONS_ID_TOKEN_REQUEST_URL is missing!"
-            exit 1
-          else
-            echo "ACTIONS_ID_TOKEN_REQUEST_URL is set."
-          fi
-
-      - name: Login to Azure using OIDC
-        uses: azure/login@v1
-        with:
-          client-id: ${{ secrets.ARM_CLIENT_ID }}
-          tenant-id: ${{ secrets.ARM_TENANT_ID }}
-          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-          allow-no-subscriptions: true
-	  auth-type: ID_TOKEN
-
-      - name: Verify Azure Login
-        run: az account show --output table
+    - name: Azure PowerShell script
+      uses: azure/powershell@v2
+      with:
+        azPSVersion: "latest"
+        inlineScript: |
+          Get-AzWebApp
