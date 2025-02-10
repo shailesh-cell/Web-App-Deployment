@@ -1,7 +1,7 @@
+name: Build and Push Image to ACR
+
 on:
   workflow_dispatch:  # Allows manual execution
-
-name: Build and Push Image to ACR
 
 jobs:
   login:
@@ -65,7 +65,7 @@ jobs:
         with:
           creds: '{"clientId":"${{ secrets.ARM_CLIENT_ID }}","clientSecret":"${{ secrets.ARM_CLIENT_SECRET }}","subscriptionId":"${{ secrets.ARM_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.ARM_TENANT_ID }}"}'  
 
-      - name: Extract ACR Name and Container Name from Terraform Output
+      - name: Extract ACR Name from Terraform Output
         working-directory: terraform
         run: |
           ACR_NAME=$(terraform output -raw acr_name 2>/dev/null || echo "${{ secrets.ACR_NAME }}")
@@ -75,8 +75,8 @@ jobs:
         run: az acr login --name ${{ env.ACR_NAME }}
 
       - name: Build and Push Docker Image
-	working-directory: flask-app
+        working-directory: flask-app  # Ensure it's in the correct directory
         run: |
-          IMAGE_NAME="flask-app"  # Use a static image name
-          docker build -t ${{ env.ACR_NAME }}.azurecr.io/$IMAGE_NAME:latest
-	  docker push ${{ env.ACR_NAME }}.azurecr.io/$IMAGE_NAME:latest
+          IMAGE_NAME="flask-app"  # Define a static image name
+          docker build -t ${{ env.ACR_NAME }}.azurecr.io/$IMAGE_NAME:latest .
+          docker push ${{ env.ACR_NAME }}.azurecr.io/$IMAGE_NAME:latest
