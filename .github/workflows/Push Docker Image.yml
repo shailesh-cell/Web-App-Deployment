@@ -3,37 +3,30 @@ name: Build and Push Docker Image to ACR
 on:
   push:
     branches:
-      - main  # This triggers the workflow when there is a push to the main branch
-  # Alternatively, you can use 'workflow_dispatch' to trigger it manually from GitHub UI
-  # workflow_dispatch:
+      - main  # Trigger on push to main branch
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest  # You can use 'windows-latest' if running on Windows
+  build:
+    runs-on: ubuntu-latest  # GitHub runner platform
 
     steps:
-      # Checkout the code from GitHub repository
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v2  # Checkout the repository to the runner
 
-      # Set up Docker
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1  # Set up Buildx for better performance
 
-      # Log in to Azure Container Registry
-      - name: Log in to Azure Container Registry
-        uses: azure/docker-login@v1
-        with:
-          login-server: ${{ secrets.ACR_REGISTRY_NAME }}.azurecr.io
-          username: ${{ secrets.ACR_USERNAME }}  # Azure Container Registry username
-          password: ${{ secrets.ACR_PASSWORD }}  # Azure Container Registry password
+    - name: Log in to Azure Container Registry
+      uses: azure/docker-login@v1  # Log in to ACR
+      with:
+        login-server: ${{ secrets.ACR_REGISTRY_NAME }}.azurecr.io  # ACR URL
+        username: ${{ secrets.ARM_CLIENT_ID }}  # Azure service principal client ID
+        password: ${{ secrets.ARM_CLIENT_SECRET }}  # Azure service principal client secret
 
-      # Build the Docker image
-      - name: Build the Docker image
-        run: |
-          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest ./flask-app
+    - name: Build Docker image
+      run: |
+        docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest ./flask-app  # Path to flask-app directory containing Dockerfile
 
-      # Push the Docker image to ACR
-      - name: Push Docker image to ACR
-        run: |
-          docker push ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest
+    - name: Push Docker image to ACR
+      run: |
+        docker push ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest  # Push the image to ACR
