@@ -69,9 +69,7 @@ jobs:
         working-directory: terraform
         run: |
           ACR_NAME=$(terraform output -raw acr_name 2>/dev/null || echo "${{ secrets.ACR_NAME }}")
-          CONTAINER_NAME=$(terraform output -raw container_name 2>/dev/null || echo "${{ secrets.CONTAINER_NAME }}")
           echo "ACR_NAME=$ACR_NAME" >> $GITHUB_ENV
-          echo "CONTAINER_NAME=$CONTAINER_NAME" >> $GITHUB_ENV
 
       - name: Login to ACR
         run: az acr login --name ${{ env.ACR_NAME }}
