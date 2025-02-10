@@ -1,4 +1,4 @@
-name: Create ACI
+name: Create ACI  # <-- Corrected workflow name
 
 on:
   workflow_dispatch:  # Allows manual execution
@@ -57,7 +57,7 @@ jobs:
         run: |
           ACR_NAME=$(terraform output -raw acr_name 2>/dev/null || echo "${{ secrets.ACR_NAME }}")
           echo "ACR_NAME=$ACR_NAME" >> $GITHUB_ENV
-	  echo "Extracted ACR Name: $ACR_NAME"
+          echo "Extracted ACR Name: $ACR_NAME"
 
       - name: Apply Terraform to Deploy ACI
         working-directory: terraform
