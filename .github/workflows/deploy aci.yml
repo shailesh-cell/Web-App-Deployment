@@ -1,0 +1,44 @@
+name: Create ACI
+
+on:
+  workflow_dispatch:  # Allows manual execution
+
+jobs:
+  login:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure Login using Service Principal
+        uses: azure/login@v2
+        with:
+          creds: '{"clientId":"${{ secrets.ARM_CLIENT_ID }}","clientSecret":"${{ secrets.ARM_CLIENT_SECRET }}","subscriptionId":"${{ secrets.ARM_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.ARM_TENANT_ID }}"}'
+          enable-AzPSSession: true
+
+    deploy-aci:
+    runs-on: ubuntu-latest
+    needs: push-image  # Ensure the image is pushed first
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Azure Login using Service Principal
+        uses: azure/login@v2
+        with:
+          creds: '{"clientId":"${{ secrets.ARM_CLIENT_ID }}","clientSecret":"${{ secrets.ARM_CLIENT_SECRET }}","subscriptionId":"${{ secrets.ARM_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.ARM_TENANT_ID }}"}'
+
+      - name: Extract ACR Name from Terraform Output
+        working-directory: terraform
+        run: |
+          ACR_NAME=$(terraform output -raw acr_name 2>/dev/null || echo "${{ secrets.ACR_NAME }}")
+          echo "ACR_NAME=$ACR_NAME" >> $GITHUB_ENV
+
+      - name: Initialize Terraform
+        working-directory: terraform
+        run: terraform init
+
+      - name: Validate Terraform
+        working-directory: terraform
+        run: terraform validate
+
+      - name: Apply Terraform to Deploy ACI
+        working-directory: terraform
+        run: terraform apply -auto-approve -target=azurerm_container_group.aci
