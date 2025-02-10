@@ -75,6 +75,8 @@ jobs:
         run: az acr login --name ${{ env.ACR_NAME }}
 
       - name: Build and Push Docker Image
+	working-directory: flask-app
         run: |
-          docker build -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.CONTAINER_NAME }}:latest .
-          docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.CONTAINER_NAME }}:latest
+          IMAGE_NAME="flask-app"  # Use a static image name
+          docker build -t ${{ env.ACR_NAME }}.azurecr.io/$IMAGE_NAME:latest
+	  docker push ${{ env.ACR_NAME }}.azurecr.io/$IMAGE_NAME:latest
