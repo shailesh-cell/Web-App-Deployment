@@ -50,7 +50,7 @@ jobs:
 
       - name: Plan Terraform Deployment
         working-directory: terraform
-        run: terraform plan -out=tfplan
+        run: terraform plan -var-file="env/dev.tfvars" -out=tfplan
 
   deploy-aci:
     runs-on: ubuntu-latest
