@@ -3,8 +3,6 @@ name: Build and Push Image to ACR
 on:
   workflow_dispatch:  # Allows manual execution of both jobs
 
-Build and Push Image to ACR
-
 jobs:
   login:
     runs-on: ubuntu-latest
