@@ -45,6 +45,7 @@ jobs:
           tenant-id: ${{ secrets.ARM_TENANT_ID }}
           subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
           allow-no-subscriptions: true
+	  auth-type: ID_TOKEN
 
       - name: Verify Azure Login
         run: az account show --output table
