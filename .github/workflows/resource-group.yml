@@ -1,6 +1,7 @@
 name: Run Azure Login and Create Resource Group
 
 on:
+  push	
   workflow_dispatch:  # Allows manual execution of both jobs
 
 permissions:
