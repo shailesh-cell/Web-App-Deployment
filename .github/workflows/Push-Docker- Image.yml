@@ -1,0 +1,39 @@
+name: Build and Push Docker Image to ACR
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check out the code from the repository
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      # Log in to Azure
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          client-secret: ${{ secrets.ARM_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+	  subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      # Log in to Azure Container Registry
+      - name: Log in to Azure Container Registry
+        run: |
+          az acr login --name ${{ secrets.ACR_NAME }}
+
+      # Build the Docker image
+      - name: Build the Docker image
+        run: |
+          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest ./flask-app
+
+      # Push the Docker image to Azure Container Registry
+      - name: Push the Docker image to Azure Container Registry
+        run: |
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest
