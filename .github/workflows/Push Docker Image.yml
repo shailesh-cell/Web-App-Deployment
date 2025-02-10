@@ -1,0 +1,39 @@
+name: Build and Push Docker Image to ACR
+
+on:
+  push:
+    branches:
+      - main  # This triggers the workflow when there is a push to the main branch
+  # Alternatively, you can use 'workflow_dispatch' to trigger it manually from GitHub UI
+  # workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest  # You can use 'windows-latest' if running on Windows
+
+    steps:
+      # Checkout the code from GitHub repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Docker
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # Log in to Azure Container Registry
+      - name: Log in to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_REGISTRY_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}  # Azure Container Registry username
+          password: ${{ secrets.ACR_PASSWORD }}  # Azure Container Registry password
+
+      # Build the Docker image
+      - name: Build the Docker image
+        run: |
+          docker build -t ${{ secrets.ACR_REGISTRY_NAME }}.azurecr.io/flask-app:latest .
+
+      # Push the Docker image to ACR
+      - name: Push Docker image to ACR
+        run: |
+          docker push ${{ secrets.ACR_REGISTRY_NAME }}.azurecr.io/flask-app:latest
