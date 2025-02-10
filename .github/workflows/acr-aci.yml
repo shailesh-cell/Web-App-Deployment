@@ -15,10 +15,6 @@ on:
         description: 'Deployment Step (resource-group, acr, push-image, aci)'
         required: false
         default: 'all'
-      acr_name:
-        description: 'Azure Container Registry Name'
-        required: true
-        default: 'myacrname'
 
 permissions:
   id-token: write
@@ -34,9 +30,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
-      - name: Set Working Directory
-        run: echo "WORK_DIR=$GITHUB_WORKSPACE/terraform" >> $GITHUB_ENV
 
       - name: Login to Azure using OIDC
         uses: azure/login@v1
@@ -58,45 +51,28 @@ jobs:
           echo "ARM_TENANT_ID=${{ secrets.ARM_TENANT_ID }}" >> $GITHUB_ENV
           echo "ARM_SUBSCRIPTION_ID=${{ secrets.ARM_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
 
-      - name: Initialize Terraform Backend
-        working-directory: ${{ env.WORK_DIR }}
-        run: |
-          terraform init \
-            -backend-config="resource_group_name=${{ secrets.TFSTATE_RESOURCE_GROUP }}" \
-            -backend-config="storage_account_name=${{ secrets.TFSTATE_STORAGE_ACCOUNT }}" \
-            -backend-config="container_name=${{ secrets.TFSTATE_CONTAINER }}" \
-            -backend-config="key=terraform.tfstate"
-
-      - name: Validate Terraform Configuration
-        working-directory: ${{ env.WORK_DIR }}
-        run: terraform validate
-
+      # Stage 1: Create Resource Group
       - name: Create Resource Group
         if: ${{ github.event.inputs.step == 'resource-group' || github.event.inputs.step == 'all' }}
-        working-directory: ${{ github.workspace }}/terraform
+        working-directory: terraform
         run: |
-          if [ -f "${{ github.workspace }}/terraform/env/${{ github.event.inputs.env }}.tfvars" ]; then
-            terraform apply -auto-approve \
-              -target=azurerm_resource_group.rg \
-              -var-file="${{ github.workspace }}/terraform/env/${{ github.event.inputs.env }}.tfvars"
-          else
-            echo "Error: env/${{ github.event.inputs.env }}.tfvars not found!"
-            exit 1
-          fi
+          terraform apply -auto-approve -target=azurerm_resource_group.rg -var-file="env/${{ github.event.inputs.env }}.tfvars"
 
+      # Stage 2: Create Azure Container Registry (ACR)
       - name: Create ACR
         if: ${{ github.event.inputs.step == 'acr' || github.event.inputs.step == 'all' }}
-        working-directory: ${{ env.WORK_DIR }}
+        working-directory: terraform
         run: |
-          terraform apply -auto-approve \
-            -target=azurerm_container_registry.acr \
-            -var-file="env/${{ github.event.inputs.env }}.tfvars" \
-            -var="acr_name=${{ github.event.inputs.acr_name }}"
+          terraform apply -auto-approve -target=azurerm_container_registry.acr -var-file="env/${{ github.event.inputs.env }}.tfvars"
 
-      - name: Get ACR Name from Input
+      # Get the ACR name for later use
+      - name: Get ACR Name from Terraform
         if: ${{ github.event.inputs.step == 'push-image' || github.event.inputs.step == 'all' }}
-        run: echo "ACR_NAME=${{ github.event.inputs.acr_name }}" >> $GITHUB_ENV
+        working-directory: terraform
+        run: |
+          echo "ACR_NAME=$(terraform output -raw acr_name)" >> $GITHUB_ENV
 
+      # Stage 3: Log in to Azure Container Registry (ACR)
       - name: Log in to Azure Container Registry
         if: ${{ github.event.inputs.step == 'push-image' || github.event.inputs.step == 'all' }}
         uses: azure/docker-login@v1
@@ -105,18 +81,17 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: Set Working Directory to flask-app
-  	run: echo "WORK_DIR=${{ github.workspace }}/flask-app" >> $GITHUB_ENV
-
+      # Stage 4: Build Docker Image and Push to ACR
       - name: Build and Push Docker Image
         if: ${{ github.event.inputs.step == 'push-image' || github.event.inputs.step == 'all' }}
         run: |
           docker buildx build --cache-from=type=registry,ref=${{ env.ACR_NAME }}.azurecr.io/flask-app:latest \
             -t ${{ env.ACR_NAME }}.azurecr.io/flask-app:${{ github.sha }} \
-            -t ${{ env.ACR_NAME }}.azurecr.io/flask-app:latest .
+            -t ${{ env.ACR_NAME }}.azurecr.io/flask-app:latest ./flask-app
           docker push ${{ env.ACR_NAME }}.azurecr.io/flask-app:${{ github.sha }}
           docker push ${{ env.ACR_NAME }}.azurecr.io/flask-app:latest
 
+      # Stage 5: Deploy Flask App to Azure Container Instances (ACI)
       - name: Deploy Flask App to ACI
         if: ${{ github.event.inputs.step == 'aci' || github.event.inputs.step == 'all' }}
         uses: azure/aci-deploy@v1
@@ -141,9 +116,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set Working Directory
-        run: echo "WORK_DIR=$GITHUB_WORKSPACE/terraform" >> $GITHUB_ENV
-
       - name: Login to Azure using OIDC
         uses: azure/login@v1
         with:
@@ -165,11 +137,6 @@ jobs:
           echo "ARM_SUBSCRIPTION_ID=${{ secrets.ARM_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
 
       - name: Destroy All Resources
-        working-directory: ${{ env.WORK_DIR }}
+        working-directory: terraform
         run: |
-          if [ -f "env/${{ github.event.inputs.env }}.tfvars" ]; then
-            terraform destroy -auto-approve -var-file="env/${{ github.event.inputs.env }}.tfvars"
-          else
-            echo "Error: env/${{ github.event.inputs.env }}.tfvars not found!"
-            exit 1
-          fi
+          terraform destroy -auto-approve -var-file="env/${{ github.event.inputs.env }}.tfvars"
