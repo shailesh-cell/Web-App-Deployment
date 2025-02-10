@@ -31,7 +31,7 @@ jobs:
       # Build the Docker image
       - name: Build the Docker image
         run: |
-          docker build -t ${{ secrets.ACR_REGISTRY_NAME }}.azurecr.io/flask-app:latest .
+          docker build -t ${{ secrets.ACR_REGISTRY_NAME }}.azurecr.io/flask-app:latest ./flask-app
 
       # Push the Docker image to ACR
       - name: Push Docker image to ACR
